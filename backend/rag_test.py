@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
-from mistralai import Mistral
+from mistralai.client import Mistral
 
 load_dotenv()
 
@@ -48,6 +48,8 @@ def answer_question(question, k=4):
     return answer, sources
 
 if __name__ == "__main__":
+    import sys
+    sys.stdout.reconfigure(encoding='utf-8')
     test_questions = [
         "What is the minimum age for a home loan?",
         "Is there a pre-payment penalty on SBI personal loans?",
