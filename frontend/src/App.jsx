@@ -48,14 +48,17 @@ function App() {
         {messages.length === 0 && (
           <p className="empty-state">Ask me anything about loan eligibility, EMI, or policies.</p>
         )}
-        {messages.map((msg, idx) => (
-          <div key={idx} className={`message ${msg.role}`}>
-            {msg.text}
-            {msg.sources && msg.sources.length > 0 && (
-              <div className="sources">Source: {msg.sources.join(', ')}</div>
-            )}
-          </div>
-        ))}
+        {messages.map((msg, idx) => {
+          const isRefusal = msg.role === 'bot' && (!msg.sources || msg.sources.length === 0)
+          return (
+            <div key={idx} className={`message ${msg.role} ${isRefusal ? 'not-found' : ''}`}>
+              {msg.text}
+              {msg.sources && msg.sources.length > 0 && (
+                <div className="sources">📄 Source: {msg.sources.join(', ')}</div>
+              )}
+            </div>
+          )
+        })}
         {loading && <div className="message bot loading">Thinking...</div>}
       </div>
 
