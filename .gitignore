@@ -17,3 +17,6 @@ backend/data/faiss_index/
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+backend/chat_logs.txt

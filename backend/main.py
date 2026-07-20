@@ -2,6 +2,18 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from graph import app_graph
+import logging
+from datetime import datetime
+
+logging.basicConfig(
+    filename="chat_logs.txt",
+    level=logging.INFO,
+    format="%(asctime)s - %(message)s",
+)
+
+# Silence noisy third-party HTTP logs, keep only our own app logs
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 app = FastAPI(title="AI Loan Advisory Chatbot API")
 
@@ -44,6 +56,8 @@ def chat(request: ChatRequest):
             "retry_count": 0,
         }
         final_state = app_graph.invoke(initial_state)
+
+        logging.info(f"Q: {request.question} | A: {final_state['answer'][:200]} | Grounded: {final_state['is_grounded']}")
 
         return ChatResponse(
             answer=final_state["answer"],
