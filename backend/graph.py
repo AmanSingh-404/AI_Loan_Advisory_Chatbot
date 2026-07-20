@@ -1,22 +1,36 @@
 import os
+import time
 from typing import TypedDict, List, Optional
 from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
-from mistralai.client import Mistral
+from groq import Groq
 from langgraph.graph import StateGraph, END
 
 load_dotenv()
 
 INDEX_DIR = "data/faiss_index"
-MISTRAL_MODEL = "mistral-large-latest"
+GROQ_MODEL = "llama-3.3-70b-versatile"
 MAX_RETRIES = 2
 
 # --- Shared resources (loaded once) ---
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 vectorstore = FAISS.load_local(INDEX_DIR, embeddings, allow_dangerous_deserialization=True)
-client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
+
+def call_llm_with_retry(messages, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            response = client.chat.completions.create(model=GROQ_MODEL, messages=messages)
+            return response.choices[0].message.content
+        except Exception as e:
+            if "429" in str(e) and attempt < max_retries - 1:
+                wait_time = 2 ** (attempt + 1)
+                print(f"Rate limited, waiting {wait_time}s...")
+                time.sleep(wait_time)
+            else:
+                raise
 
 # --- State definition ---
 class GraphState(TypedDict):
@@ -41,7 +55,12 @@ def retrieve_node(state: GraphState) -> GraphState:
 
 # --- Node 2: Generate ---
 GENERATE_PROMPT = """You are a loan advisory assistant. Answer the question using ONLY the context below.
-If the answer is not in the context, say "I don't have that information in the documents provided" — do not guess or use outside knowledge.
+
+STRICT RULES:
+- If the answer is not in the context, say "I don't have that information in the documents provided" — do not guess or use outside knowledge.
+- Each piece of context is labeled with its source document. Do NOT mix or combine rules from different source documents into a single statement unless the question explicitly asks you to compare them.
+- If different source documents contain different or seemingly conflicting rules, mention each source separately and attribute each rule to its specific document by name.
+- Never imply a rule from one document (e.g., an RBI circular) applies to a specific bank's product (e.g., SBI) unless that exact document states so.
 
 Context:
 {context}
@@ -55,11 +74,7 @@ def generate_node(state: GraphState) -> GraphState:
         f"[Source: {d['source']}]\n{d['content']}" for d in state["retrieved_docs"]
     )
     prompt = GENERATE_PROMPT.format(context=context, question=state["question"])
-    response = client.chat.complete(
-        model=MISTRAL_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    answer = response.choices[0].message.content
+    answer = call_llm_with_retry([{"role": "user", "content": prompt}])
     return {**state, "answer": answer}
 
 
@@ -69,6 +84,7 @@ VALIDATE_PROMPT = """You are a strict fact-checker. Given the CONTEXT and the AN
 Rules:
 - If the answer says "I don't have that information", that always counts as GROUNDED (it's correctly refusing).
 - If the answer states any fact, number, or rule not present in the context, that is NOT grounded.
+- If the answer attributes a rule from one source document to a DIFFERENT, unrelated entity (e.g., applying an RBI circular's rule to a specific bank's product without that bank's own document stating it), that is NOT grounded — this counts as misattribution even if both facts individually appear somewhere in the context.
 
 Context:
 {context}
@@ -81,12 +97,8 @@ Respond with ONLY one word: "GROUNDED" or "NOT_GROUNDED"."""
 def validate_node(state: GraphState) -> GraphState:
     context = "\n\n".join(d["content"] for d in state["retrieved_docs"])
     prompt = VALIDATE_PROMPT.format(context=context, answer=state["answer"])
-    response = client.chat.complete(
-        model=MISTRAL_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    verdict = response.choices[0].message.content.strip().upper()
-    is_grounded = "NOT_GROUNDED" not in verdict  # safe default check
+    verdict = call_llm_with_retry([{"role": "user", "content": prompt}]).strip().upper()
+    is_grounded = "NOT_GROUNDED" not in verdict
 
     is_refusal = "don't have that information" in state["answer"].lower()
 
