@@ -16,9 +16,17 @@ def load_documents():
             loader = PyPDFLoader(filepath)
             docs = loader.load()
             # Attach clean source filename to metadata for later citation
-            for doc in docs:
-                doc.metadata["source"] = filename
-            all_docs.extend(docs)
+            ENTITY_MAP = {
+    "1343212208682_PERSONAL_LOAN_MITC_JUL_12.pdf": "SBI",
+    "in-personal-loan-most-imp-tnc.pdf": "Standard Chartered Bank",
+    "Bank_Home_Loans_consumer_products.pdf": "General/Comparative (multiple banks)",
+    "NT642A32A71F06D649B78A9622FB82B8C438.pdf": "RBI (Reserve Bank of India) - NOTE: this circular is marked WITHDRAWN",
+            }
+
+    for doc in docs:
+        doc.metadata["source"] = filename
+        doc.metadata["entity"] = ENTITY_MAP.get(filename, "Unknown")
+        all_docs.extend(docs)
     return all_docs
 
 def chunk_documents(documents):
@@ -48,4 +56,4 @@ if __name__ == "__main__":
     chunks = chunk_documents(documents)
     build_and_save_index(chunks)
 
-    print("\n✅ Ingestion complete!")
+    print("\n Ingestion complete!")
