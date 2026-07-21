@@ -46,8 +46,11 @@ function App() {
 
       <div className="chat-messages">
         {messages.length === 0 && (
-          <p className="empty-state">Ask me anything about loan eligibility, EMI, or policies.</p>
-        )}
+  <div className="intro-message">
+    <p><strong>👋 Welcome to the AI Loan Advisory Chatbot</strong></p>
+    <p>I can answer questions about home loans, personal loans, EMI rules, and RBI guidelines — based only on the documents I've been given. If I don't have an answer in my documents, I'll tell you honestly instead of guessing.</p>
+  </div>
+)}
         {messages.map((msg, idx) => {
           const isRefusal = msg.role === 'bot' && (!msg.sources || msg.sources.length === 0)
           return (

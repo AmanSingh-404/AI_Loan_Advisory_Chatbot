@@ -108,3 +108,11 @@ body {
   background: #fef3c7;
   border: 1px solid #fde68a;
 }
+
+.intro-message {
+  text-align: center;
+  color: #555;
+  margin-top: 60px;
+  padding: 0 40px;
+  line-height: 1.6;
+}
