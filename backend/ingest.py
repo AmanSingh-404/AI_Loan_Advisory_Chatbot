@@ -21,12 +21,15 @@ def load_documents():
     "in-personal-loan-most-imp-tnc.pdf": "Standard Chartered Bank",
     "Bank_Home_Loans_consumer_products.pdf": "General/Comparative (multiple banks)",
     "NT642A32A71F06D649B78A9622FB82B8C438.pdf": "RBI (Reserve Bank of India) - NOTE: this circular is marked WITHDRAWN",
-            }
+}
 
-    for doc in docs:
-        doc.metadata["source"] = filename
-        doc.metadata["entity"] = ENTITY_MAP.get(filename, "Unknown")
-        all_docs.extend(docs)
+            for doc in docs:
+                entity = ENTITY_MAP.get(filename, "Unknown")
+                doc.metadata["source"] = filename
+                doc.metadata["entity"] = entity
+                doc.page_content = f"[{entity}] {doc.page_content}"
+            all_docs.extend(docs)
+
     return all_docs
 
 def chunk_documents(documents):

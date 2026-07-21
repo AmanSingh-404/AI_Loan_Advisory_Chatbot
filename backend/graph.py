@@ -45,11 +45,15 @@ class GraphState(TypedDict):
 # --- Node 1: Retrieve ---
 def retrieve_node(state: GraphState) -> GraphState:
     query = state["question"]
-    results = vectorstore.similarity_search(query, k=4)
+    results = vectorstore.similarity_search(query, k=6)
     retrieved_docs = [
-        {"content": doc.page_content, "source": doc.metadata.get("source")}
-        for doc in results
-    ]
+    {
+        "content": doc.page_content,
+        "source": doc.metadata.get("source"),
+        "entity": doc.metadata.get("entity", "Unknown"),
+    }
+    for doc in results
+]
     return {**state, "retrieved_docs": retrieved_docs}
 
 
@@ -71,7 +75,7 @@ Answer:"""
 
 def generate_node(state: GraphState) -> GraphState:
     context = "\n\n".join(
-        f"[Source: {d['source']}]\n{d['content']}" for d in state["retrieved_docs"]
+        f"[Source: {d['source']} | Entity: {d['entity']}]\n{d['content']}" for d in state["retrieved_docs"]
     )
     prompt = GENERATE_PROMPT.format(context=context, question=state["question"])
     answer = call_llm_with_retry([{"role": "user", "content": prompt}])
