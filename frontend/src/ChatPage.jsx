@@ -11,6 +11,8 @@ function ChatPage() {
   const [uploading, setUploading] = useState(false)
     const fileInputRef = useRef(null)
 
+    const sessionId = useRef(crypto.randomUUID())
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -29,7 +31,7 @@ function ChatPage() {
       const response = await fetch(`${API_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: userMessage.text }),
+        body: JSON.stringify({ question: userMessage.text, session_id: sessionId.current }),
       })
 
       if (!response.ok) throw new Error('Server error')
