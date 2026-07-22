@@ -1,7 +1,11 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from graph import app_graph
+from graph import app_graph, reload_vectorstore
+from ingest import add_document_to_index
+from fastapi import UploadFile, File, Form
+import shutil
+import os
 import logging
 from datetime import datetime
 
@@ -66,3 +70,36 @@ def chat(request: ChatRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Something went wrong: {str(e)}")
+
+RAW_DOCS_DIR = "data/raw_docs"
+
+@app.post("/upload")
+async def upload_document(file: UploadFile = File(...), entity: str = Form(None)):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+
+    os.makedirs(RAW_DOCS_DIR, exist_ok=True)
+    save_path = os.path.join(RAW_DOCS_DIR, file.filename)
+
+    if os.path.exists(save_path):
+        raise HTTPException(status_code=400, detail="A file with this name already exists")
+
+    try:
+        with open(save_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        chunk_count = add_document_to_index(save_path, file.filename, entity=entity)
+        reload_vectorstore()
+
+        logging.info(f"UPLOAD: {file.filename} | entity={entity} | chunks={chunk_count}")
+
+        return {
+            "filename": file.filename,
+            "entity": entity or "User Uploaded Document",
+            "chunks_added": chunk_count,
+            "status": "success",
+        }
+    except Exception as e:
+        if os.path.exists(save_path):
+            os.remove(save_path)
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
