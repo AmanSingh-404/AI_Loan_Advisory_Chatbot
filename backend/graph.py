@@ -13,10 +13,17 @@ INDEX_DIR = "data/faiss_index"
 GROQ_MODEL = "llama-3.3-70b-versatile"
 MAX_RETRIES = 2
 
-# --- Shared resources (loaded once) ---
+# --- Shared resources (loaded once, reloadable) ---
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 vectorstore = FAISS.load_local(INDEX_DIR, embeddings, allow_dangerous_deserialization=True)
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+
+def reload_vectorstore():
+    """Re-read the FAISS index from disk. Call this after a new document is added."""
+    global vectorstore
+    vectorstore = FAISS.load_local(INDEX_DIR, embeddings, allow_dangerous_deserialization=True)
+    print("Vector store reloaded.")
 
 
 def call_llm_with_retry(messages, max_retries=3):
