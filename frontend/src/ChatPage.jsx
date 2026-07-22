@@ -69,7 +69,8 @@ function ChatPage() {
   ])
 
   const formData = new FormData()
-  formData.append('file', file)
+formData.append('file', file)
+formData.append('session_id', sessionId.current)
 
   try {
     const response = await fetch(`${API_URL}/upload`, {
