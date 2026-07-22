@@ -13,17 +13,31 @@ INDEX_DIR = "data/faiss_index"
 GROQ_MODEL = "llama-3.3-70b-versatile"
 MAX_RETRIES = 2
 
-# --- Shared resources (loaded once, reloadable) ---
+# --- Shared resources ---
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-vectorstore = FAISS.load_local(INDEX_DIR, embeddings, allow_dangerous_deserialization=True)
+
+# This is the permanent, shared base index — same 4 loan documents for every user.
+base_vectorstore = FAISS.load_local(INDEX_DIR, embeddings, allow_dangerous_deserialization=True)
+
+# Per-session, in-memory only. Key = session_id, value = FAISS store.
+# NOTE: cleared whenever the server restarts. That's an intentional, documented
+# limitation for this project — a production version would use a persistent
+# per-user store (e.g. one index per user account) instead.
+session_stores = {}
+
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
-def reload_vectorstore():
-    """Re-read the FAISS index from disk. Call this after a new document is added."""
-    global vectorstore
-    vectorstore = FAISS.load_local(INDEX_DIR, embeddings, allow_dangerous_deserialization=True)
-    print("Vector store reloaded.")
+def add_session_document(session_id, chunks):
+    """Add uploaded chunks to a session-only in-memory index. Never touches the shared base index."""
+    if session_id not in session_stores:
+        session_stores[session_id] = FAISS.from_documents(chunks, embeddings)
+    else:
+        session_stores[session_id].add_documents(chunks)
+
+
+def clear_session(session_id):
+    session_stores.pop(session_id, None)
 
 
 def call_llm_with_retry(messages, max_retries=3):
@@ -42,6 +56,7 @@ def call_llm_with_retry(messages, max_retries=3):
 # --- State definition ---
 class GraphState(TypedDict):
     question: str
+    session_id: Optional[str]
     retrieved_docs: List[dict]
     answer: str
     is_grounded: bool
@@ -52,15 +67,22 @@ class GraphState(TypedDict):
 # --- Node 1: Retrieve ---
 def retrieve_node(state: GraphState) -> GraphState:
     query = state["question"]
-    results = vectorstore.similarity_search(query, k=6)
+    session_id = state.get("session_id")
+
+    results = base_vectorstore.similarity_search(query, k=6)
+
+    if session_id and session_id in session_stores:
+        session_results = session_stores[session_id].similarity_search(query, k=6)
+        results = results + session_results
+
     retrieved_docs = [
-    {
-        "content": doc.page_content,
-        "source": doc.metadata.get("source"),
-        "entity": doc.metadata.get("entity", "Unknown"),
-    }
-    for doc in results
-]
+        {
+            "content": doc.page_content,
+            "source": doc.metadata.get("source"),
+            "entity": doc.metadata.get("entity", "Unknown"),
+        }
+        for doc in results
+    ]
     return {**state, "retrieved_docs": retrieved_docs}
 
 
