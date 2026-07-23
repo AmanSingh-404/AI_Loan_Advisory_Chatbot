@@ -102,7 +102,7 @@ function LandingPage() {
       <nav>
         <div className="wrap">
           <span className="brand">
-            VERITA<span className="dot">.</span>
+            LoanSense AI<span className="dot">.</span>
           </span>
           <span className="nav-tag mono">CASE FILES: OPEN</span>
         </div>
@@ -120,7 +120,7 @@ function LandingPage() {
           </h1>
           <div className="hero-sub">
             <p className="hero-lede">
-              Verita cracks open your loan paperwork and answers in plain language —{' '}
+              LoanSense AI cracks open your loan paperwork and answers in plain language —{' '}
               <strong>every claim traced, every guess refused.</strong>
             </p>
             <a href="/chat" onClick={goToChat} className="cta-btn">
@@ -269,7 +269,7 @@ function LandingPage() {
 
       <footer>
         <div className="wrap">
-          <span>VERITA // GROUNDED LOAN ANSWERS</span>
+          <span>LoanSense AI // GROUNDED LOAN ANSWERS</span>
           <span>NOTHING ANSWERED WITHOUT A SOURCE</span>
         </div>
       </footer>

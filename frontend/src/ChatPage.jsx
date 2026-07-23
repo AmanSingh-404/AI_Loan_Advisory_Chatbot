@@ -112,7 +112,7 @@ formData.append('session_id', sessionId.current)
       <header className="vc-header">
         <div className="vc-header-inner">
           <div className="vc-brand">
-            VERITA<span className="dot">.</span>
+            LoanSense AI<span className="dot">.</span>
           </div>
           <a href="/" className="vc-back">← BACK TO CASE FILES</a>
         </div>
@@ -124,7 +124,7 @@ formData.append('session_id', sessionId.current)
           <div className="vc-empty">
             <div className="vc-empty-tag mono">CASE FILE — EMPTY</div>
             <h2>Ask something about your loan terms.</h2>
-            <p>Verita only answers from the documents it's been given — home loan policy, SBI &amp; Standard Chartered personal loan terms, and RBI circulars. No source, no answer.</p>
+            <p>LoanSense AI only answers from the documents it's been given — home loan policy, SBI &amp; Standard Chartered personal loan terms, and RBI circulars. No source, no answer.</p>
           </div>
         )}
 
