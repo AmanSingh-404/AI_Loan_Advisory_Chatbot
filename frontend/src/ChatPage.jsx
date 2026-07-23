@@ -40,6 +40,7 @@ function ChatPage() {
       const botMessage = { role: 'bot', text: data.answer, sources: data.sources }
       setMessages((prev) => [...prev, botMessage])
     } catch (err) {
+      console.error(err)
       setMessages((prev) => [
         ...prev,
         { role: 'bot', text: "Connection to the case file server failed. Confirm the backend is running.", sources: [] },
@@ -95,6 +96,7 @@ formData.append('session_id', sessionId.current)
       ])
     }
   } catch (err) {
+    console.error(err)
     setMessages((prev) => [
       ...prev,
       { role: 'system', text: 'Upload failed: could not reach the server.', isError: true },
