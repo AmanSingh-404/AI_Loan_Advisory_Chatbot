@@ -22,9 +22,20 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 app = FastAPI(title="AI Loan Advisory Chatbot API")
 
+
+allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+# Add your deployed frontend URL once you have it (Step 11.7)
+frontend_url = os.getenv("FRONTEND_URL")
+if frontend_url:
+    allowed_origins.append(frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
