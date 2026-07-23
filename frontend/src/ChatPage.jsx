@@ -184,7 +184,7 @@ formData.append('session_id', sessionId.current)
     disabled={loading || uploading}
     title="Upload a PDF document"
   >
-    📎
+    <span className="clip-icon">📎</span>
   </button>
   <input
     type="text"

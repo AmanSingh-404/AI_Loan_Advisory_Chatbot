@@ -261,10 +261,22 @@
   width: 46px;
   height: 46px;
   border-radius: 50%;
-  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+  font-size: 40px;
   cursor: pointer;
   flex-shrink: 0;
   transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.clip-icon {
+  font-size: 28px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .vc-upload-btn:hover:not(:disabled) { border-color: var(--acid); transform: scale(1.05); }
 .vc-upload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
