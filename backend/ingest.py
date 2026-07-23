@@ -1,13 +1,8 @@
 import os
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
-
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_mistralai import MistralAIEmbeddings
-from dotenv import load_dotenv
-
-load_dotenv()
+from langchain_huggingface import HuggingFaceEmbeddings
 
 RAW_DOCS_DIR = "data/raw_docs"
 INDEX_DIR = "data/faiss_index"
@@ -24,7 +19,7 @@ _embeddings = None
 def get_embeddings():
     global _embeddings
     if _embeddings is None:
-        _embeddings = MistralAIEmbeddings(model="mistral-embed")
+        _embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     return _embeddings
 
 
