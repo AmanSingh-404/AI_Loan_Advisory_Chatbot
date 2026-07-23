@@ -1,9 +1,11 @@
 import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 import time
 from typing import TypedDict, List, Optional
 from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_mistralai import MistralAIEmbeddings
 from groq import Groq
 from langgraph.graph import StateGraph, END
 
@@ -14,7 +16,7 @@ GROQ_MODEL = "llama-3.3-70b-versatile"
 MAX_RETRIES = 2
 
 # --- Shared resources ---
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+embeddings = MistralAIEmbeddings(model="mistral-embed")
 
 # This is the permanent, shared base index — same 4 loan documents for every user.
 base_vectorstore = FAISS.load_local(INDEX_DIR, embeddings, allow_dangerous_deserialization=True)

@@ -5,11 +5,10 @@ python-dotenv==1.1.1
 langchain
 langchain-community
 langchain-text-splitters
-langchain-huggingface
+langchain-mistralai
 groq==0.37.1
 langgraph<1.2.0
 mistralai==2.5.2
 faiss-cpu==1.11.0.post1
 pypdf==6.0.0
-sentence-transformers==5.5.1
 python-multipart==0.0.32

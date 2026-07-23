@@ -1,7 +1,9 @@
 import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_mistralai import MistralAIEmbeddings
 from mistralai.client import Mistral
 
 load_dotenv()
@@ -10,7 +12,7 @@ INDEX_DIR = "data/faiss_index"
 MISTRAL_MODEL = "mistral-large-latest"
 
 # --- Load vector store ---
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+embeddings = MistralAIEmbeddings(model="mistral-embed")
 vectorstore = FAISS.load_local(INDEX_DIR, embeddings, allow_dangerous_deserialization=True)
 
 # --- Set up Mistral client ---
