@@ -83,7 +83,9 @@ def chat(request: ChatRequest):
             is_grounded=final_state["is_grounded"],
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Something went wrong: {str(e)}")
+        logging.exception("Error during chat execution:")
+        error_msg = str(e) if str(e) else repr(e)
+        raise HTTPException(status_code=500, detail=f"Something went wrong: {error_msg}")
 
 RAW_DOCS_DIR = "data/raw_docs"
 
