@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import './ChatPage.css'
 
-const API_URL = 'http://127.0.0.1:8000'
+const API_URL = 'https://ailoanadvisorychatbot-production.up.railway.app'
 
 function ChatPage() {
   const [messages, setMessages] = useState([])
