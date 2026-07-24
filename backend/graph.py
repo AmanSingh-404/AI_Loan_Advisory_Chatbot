@@ -136,7 +136,14 @@ def validate_node(state: GraphState) -> GraphState:
     is_refusal = "don't have that information" in state["answer"].lower()
 
     if is_grounded and not is_refusal:
-        sources = list(set(d["source"] for d in state["retrieved_docs"]))
+        # Only keep sources that are actually referenced by name in the answer text.
+        # Falls back to all retrieved sources if none match (e.g. answer paraphrased without naming the file).
+        answer_lower = state["answer"].lower()
+        cited_sources = [
+            d["source"] for d in state["retrieved_docs"]
+            if d["source"].lower() in answer_lower
+        ]
+        sources = list(set(cited_sources)) if cited_sources else list(set(d["source"] for d in state["retrieved_docs"]))
     else:
         sources = []
 
