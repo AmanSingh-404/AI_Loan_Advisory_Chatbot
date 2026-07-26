@@ -150,7 +150,7 @@ def validate_node(state: GraphState) -> GraphState:
     else:
         sources = []
 
-    return {**state, "is_grounded": is_grounded, "sources": sources}
+    return {**state, "is_grounded": is_grounded, "sources": sources, "answer_type": "document"}
 
 
 # --- Node 4: Refine (bump retry count before looping back) ---
@@ -166,6 +166,79 @@ def route_after_validation(state: GraphState) -> str:
         return "retry"
     return "end"  # give up after max retries, return best-effort answer
 
+
+import json
+import math
+
+CLASSIFY_PROMPT = """Determine if the user's question is asking you to CALCULATE a loan-related number
+(such as EMI, total interest payable, or total repayment amount) using numbers they provide,
+versus asking a FACTUAL question about loan policy, eligibility, or terms.
+
+Respond with ONLY one word: "CALCULATION" or "DOCUMENT".
+
+Question: {question}"""
+
+def classify_intent_node(state: GraphState) -> GraphState:
+    result = call_llm_with_retry([{"role": "user", "content": CLASSIFY_PROMPT.format(question=state["question"])}])
+    intent = "calculation" if "CALCULATION" in result.strip().upper() else "document"
+    return {**state, "intent": intent}
+
+EXTRACT_PROMPT = """Extract the loan calculation parameters from the question below, if present.
+Respond with ONLY a JSON object, no other text, in this exact format:
+{{"principal": <number or null>, "annual_rate_percent": <number or null>, "tenure_years": <number or null>}}
+
+Principal is the loan amount in rupees (convert "lakh" to actual number, e.g. 40 lakh = 4000000).
+annual_rate_percent is the yearly interest rate as a plain number (e.g. 8.85, not 0.0885).
+tenure_years is the loan duration in years (convert months to years if needed).
+Use null for any value not mentioned.
+
+Question: {question}"""
+
+def extract_params_node(state: GraphState) -> GraphState:
+    result = call_llm_with_retry([{"role": "user", "content": EXTRACT_PROMPT.format(question=state["question"])}])
+    try:
+        cleaned = result.strip().strip("`").replace("json", "", 1).strip()
+        params = json.loads(cleaned)
+    except Exception:
+        params = {"principal": None, "annual_rate_percent": None, "tenure_years": None}
+    return {**state, "calc_params": params}
+
+
+def calculate_node(state: GraphState) -> GraphState:
+    params = state["calc_params"] or {}
+    principal = params.get("principal")
+    rate = params.get("annual_rate_percent")
+    tenure = params.get("tenure_years")
+
+    missing = [name for name, val in [("loan amount", principal), ("interest rate", rate), ("tenure in years", tenure)] if val is None]
+
+    if missing:
+        answer = (
+            "To calculate your EMI, I need a few more details: "
+            + ", ".join(missing)
+            + ". Could you provide those?"
+        )
+        return {**state, "answer": answer, "is_grounded": True, "sources": [], "answer_type": "needs_info"}
+
+    monthly_rate = (rate / 100) / 12
+    n_months = int(tenure * 12)
+
+    if monthly_rate == 0:
+        emi = principal / n_months
+    else:
+        emi = principal * monthly_rate * (1 + monthly_rate) ** n_months / ((1 + monthly_rate) ** n_months - 1)
+
+    total_payment = emi * n_months
+    total_interest = total_payment - principal
+
+    answer = (
+        f"For a loan of Rs. {principal:,.0f} at {rate}% annual interest over {tenure:.0f} years, "
+        f"the estimated EMI is Rs. {emi:,.0f} per month. "
+        f"Total repayment over the tenure would be approximately Rs. {total_payment:,.0f}, "
+        f"including about Rs. {total_interest:,.0f} in total interest. "
+        f"This is a standard EMI formula calculation, not a figure quoted from a specific document."
+    )
+    return {**state, "answer": answer, "is_grounded": True, "sources": [], "answer_type": "calculated"}
 
 # --- Build the graph ---
 def build_graph():
