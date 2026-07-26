@@ -57,10 +57,13 @@ def call_llm_with_retry(messages, max_retries=3):
 class GraphState(TypedDict):
     question: str
     session_id: Optional[str]
+    intent: Optional[str]
+    calc_params: Optional[dict]
     retrieved_docs: List[dict]
     answer: str
     is_grounded: bool
     sources: List[str]
+    answer_type: str
     retry_count: int
 
 
