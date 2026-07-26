@@ -51,6 +51,7 @@ class ChatResponse(BaseModel):
     answer: str
     sources: list[str] = []
     is_grounded: bool = True
+    answer_type: str = "document"
 
 
 @app.get("/health")
@@ -67,10 +68,13 @@ def chat(request: ChatRequest):
         initial_state = {
     "question": request.question,
     "session_id": request.session_id,
+    "intent": None,
+    "calc_params": None,
     "retrieved_docs": [],
     "answer": "",
     "is_grounded": False,
     "sources": [],
+    "answer_type": "document",
     "retry_count": 0,
 }
         final_state = app_graph.invoke(initial_state)
@@ -81,6 +85,7 @@ def chat(request: ChatRequest):
             answer=final_state["answer"],
             sources=final_state["sources"],
             is_grounded=final_state["is_grounded"],
+            answer_type=final_state.get("answer_type", "document"),
         )
     except Exception as e:
         logging.exception("Error during chat execution:")
