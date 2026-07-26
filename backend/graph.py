@@ -241,18 +241,44 @@ def calculate_node(state: GraphState) -> GraphState:
     return {**state, "answer": answer, "is_grounded": True, "sources": [], "answer_type": "calculated"}
 
 # --- Build the graph ---
+def route_after_classify(state: GraphState) -> str:
+    return "extract_params" if state["intent"] == "calculation" else "retrieve"
+
+
+def route_after_extract(state: GraphState) -> str:
+    params = state["calc_params"] or {}
+    if params.get("principal") is not None and params.get("annual_rate_percent") is not None and params.get("tenure_years") is not None:
+        return "calculate"
+    return "calculate"  # calculate_node itself handles the "missing info" message
+
+
 def build_graph():
     graph = StateGraph(GraphState)
 
+    graph.add_node("classify_intent", classify_intent_node)
+    graph.add_node("extract_params", extract_params_node)
+    graph.add_node("calculate", calculate_node)
     graph.add_node("retrieve", retrieve_node)
     graph.add_node("generate", generate_node)
     graph.add_node("validate", validate_node)
     graph.add_node("refine", refine_node)
 
-    graph.set_entry_point("retrieve")
+    graph.set_entry_point("classify_intent")
+
+    graph.add_conditional_edges(
+        "classify_intent",
+        route_after_classify,
+        {"extract_params": "extract_params", "retrieve": "retrieve"},
+    )
+    graph.add_conditional_edges(
+        "extract_params",
+        route_after_extract,
+        {"calculate": "calculate"},
+    )
+    graph.add_edge("calculate", END)
+
     graph.add_edge("retrieve", "generate")
     graph.add_edge("generate", "validate")
-
     graph.add_conditional_edges(
         "validate",
         route_after_validation,
