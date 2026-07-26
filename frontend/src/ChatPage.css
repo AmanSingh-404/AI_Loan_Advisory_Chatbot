@@ -135,6 +135,16 @@
   border-left: 3px solid var(--acid);
 }
 
+.vc-bubble.calculated {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--violet);
+}
+
+.vc-status.calculated {
+  color: var(--violet);
+}
+
 .vc-bubble.declined {
   background: var(--panel);
   border: 1px solid var(--line);

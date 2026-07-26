@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import './ChatPage.css'
 
-const API_URL = 'https://ailoanadvisorychatbot-production.up.railway.app'
+// const API_URL = 'https://ailoanadvisorychatbot-production.up.railway.app'
+const API_URL = 'http://127.0.0.1:8000'
 
 function ChatPage() {
   const [messages, setMessages] = useState([])
@@ -9,9 +10,9 @@ function ChatPage() {
   const [loading, setLoading] = useState(false)
   const scrollRef = useRef(null)
   const [uploading, setUploading] = useState(false)
-    const fileInputRef = useRef(null)
+  const fileInputRef = useRef(null)
 
-    const sessionId = useRef(crypto.randomUUID())
+  const sessionId = useRef(crypto.randomUUID())
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -37,7 +38,7 @@ function ChatPage() {
       if (!response.ok) throw new Error('Server error')
 
       const data = await response.json()
-      const botMessage = { role: 'bot', text: data.answer, sources: data.sources }
+      const botMessage = { role: 'bot', text: data.answer, sources: data.sources, answerType: data.answer_type }
       setMessages((prev) => [...prev, botMessage])
     } catch (err) {
       console.error(err)
@@ -51,61 +52,61 @@ function ChatPage() {
   }
 
   const handleFileUpload = async (e) => {
-  const file = e.target.files[0]
-  if (!file) return
+    const file = e.target.files[0]
+    if (!file) return
 
-  if (!file.name.toLowerCase().endsWith('.pdf')) {
-    setMessages((prev) => [
-      ...prev,
-      { role: 'bot', text: 'Only PDF files are supported.', sources: [] },
-    ])
-    e.target.value = ''
-    return
-  }
-
-  setUploading(true)
-  setMessages((prev) => [
-    ...prev,
-    { role: 'system', text: `Uploading "${file.name}" to the case file index...` },
-  ])
-
-  const formData = new FormData()
-formData.append('file', file)
-formData.append('session_id', sessionId.current)
-
-  try {
-    const response = await fetch(`${API_URL}/upload`, {
-      method: 'POST',
-      body: formData,
-    })
-
-    const data = await response.json()
-
-    if (!response.ok) {
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
       setMessages((prev) => [
         ...prev,
-        { role: 'system', text: `Upload failed: ${data.detail}`, isError: true },
+        { role: 'bot', text: 'Only PDF files are supported.', sources: [] },
       ])
-    } else {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'system',
-          text: `"${data.filename}" added to the case file index (${data.chunks_added} sections indexed). You can ask about it now.`,
-        },
-      ])
+      e.target.value = ''
+      return
     }
-  } catch (err) {
-    console.error(err)
+
+    setUploading(true)
     setMessages((prev) => [
       ...prev,
-      { role: 'system', text: 'Upload failed: could not reach the server.', isError: true },
+      { role: 'system', text: `Uploading "${file.name}" to the case file index...` },
     ])
-  } finally {
-    setUploading(false)
-    e.target.value = ''
+
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('session_id', sessionId.current)
+
+    try {
+      const response = await fetch(`${API_URL}/upload`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'system', text: `Upload failed: ${data.detail}`, isError: true },
+        ])
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'system',
+            text: `"${data.filename}" added to the case file index (${data.chunks_added} sections indexed). You can ask about it now.`,
+          },
+        ])
+      }
+    } catch (err) {
+      console.error(err)
+      setMessages((prev) => [
+        ...prev,
+        { role: 'system', text: 'Upload failed: could not reach the server.', isError: true },
+      ])
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
   }
-}
 
   return (
     <div className="verita-chat">
@@ -129,34 +130,44 @@ formData.append('session_id', sessionId.current)
         )}
 
         {messages.map((msg, idx) => {
-  if (msg.role === 'system') {
-    return (
-      <div key={idx} className="vc-row system">
-        <div className={`vc-system-note mono ${msg.isError ? 'error' : ''}`}>
-          {msg.isError ? '⚠ ' : '📎 '}{msg.text}
-        </div>
-      </div>
-    )
-  }
+          if (msg.role === 'system') {
+            return (
+              <div key={idx} className="vc-row system">
+                <div className={`vc-system-note mono ${msg.isError ? 'error' : ''}`}>
+                  {msg.isError ? '⚠ ' : '📎 '}{msg.text}
+                </div>
+              </div>
+            )
+          }
 
-  const isBot = msg.role === 'bot'
-  const isDeclined = isBot && (!msg.sources || msg.sources.length === 0)
-  return (
-    <div key={idx} className={`vc-row ${isBot ? 'bot' : 'user'}`}>
-      <div className={`vc-bubble ${isBot ? (isDeclined ? 'declined' : 'verified') : 'user'}`}>
-        {isBot && (
-          <div className={`vc-status mono ${isDeclined ? 'declined' : 'verified'}`}>
-            {isDeclined ? '✕ DECLINED — NOT IN FILE' : '✓ SOURCE VERIFIED'}
-          </div>
-        )}
-        <div className="vc-text">{msg.text}</div>
-        {isBot && msg.sources && msg.sources.length > 0 && (
-          <div className="vc-sources mono">§ {msg.sources.join(' · ')}</div>
-        )}
-      </div>
-    </div>
-  )
-})}
+          const isBot = msg.role === 'bot'
+          const answerType = msg.answerType || 'document'
+          const hasSources = msg.sources && msg.sources.length > 0
+          const isCalculated = isBot && answerType === 'calculated'
+          const isDeclined = isBot && !isCalculated && !hasSources
+
+          let statusClass = 'verified'
+          let statusLabel = '✓ SOURCE VERIFIED'
+          if (isDeclined) {
+            statusClass = 'declined'
+            statusLabel = '✕ DECLINED — NOT IN FILE'
+          } else if (isCalculated) {
+            statusClass = 'calculated'
+            statusLabel = '≈ CALCULATED — NOT FROM DOCUMENTS'
+          }
+
+          return (
+            <div key={idx} className={`vc-row ${isBot ? 'bot' : 'user'}`}>
+              <div className={`vc-bubble ${isBot ? statusClass : 'user'}`}>
+                {isBot && <div className={`vc-status mono ${statusClass}`}>{statusLabel}</div>}
+                <div className="vc-text">{msg.text}</div>
+                {isBot && hasSources && (
+                  <div className="vc-sources mono">§ {msg.sources.join(' · ')}</div>
+                )}
+              </div>
+            </div>
+          )
+        })}
 
         {loading && (
           <div className="vc-row bot">
@@ -171,33 +182,33 @@ formData.append('session_id', sessionId.current)
       </div>
 
       <div className="vc-input-area">
-  <input
-    type="file"
-    accept=".pdf"
-    ref={fileInputRef}
-    onChange={handleFileUpload}
-    style={{ display: 'none' }}
-  />
-  <button
-    className="vc-upload-btn"
-    onClick={() => fileInputRef.current.click()}
-    disabled={loading || uploading}
-    title="Upload a PDF document"
-  >
-    <span className="clip-icon">📎</span>
-  </button>
-  <input
-    type="text"
-    value={input}
-    onChange={(e) => setInput(e.target.value)}
-    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-    placeholder="Type your question..."
-    disabled={loading || uploading}
-  />
-  <button onClick={handleSend} disabled={loading || uploading}>
-    SEND <span className="arrow">↗</span>
-  </button>
-</div>
+        <input
+          type="file"
+          accept=".pdf"
+          ref={fileInputRef}
+          onChange={handleFileUpload}
+          style={{ display: 'none' }}
+        />
+        <button
+          className="vc-upload-btn"
+          onClick={() => fileInputRef.current.click()}
+          disabled={loading || uploading}
+          title="Upload a PDF document"
+        >
+          <span className="clip-icon">📎</span>
+        </button>
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          placeholder="Type your question..."
+          disabled={loading || uploading}
+        />
+        <button onClick={handleSend} disabled={loading || uploading}>
+          SEND <span className="arrow">↗</span>
+        </button>
+      </div>
     </div>
   )
 }
