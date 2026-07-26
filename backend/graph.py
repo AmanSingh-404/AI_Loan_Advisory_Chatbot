@@ -181,6 +181,7 @@ Question: {question}"""
 def classify_intent_node(state: GraphState) -> GraphState:
     result = call_llm_with_retry([{"role": "user", "content": CLASSIFY_PROMPT.format(question=state["question"])}])
     intent = "calculation" if "CALCULATION" in result.strip().upper() else "document"
+    print(f"DEBUG: classified as -> {intent} (raw model output: {result!r})")
     return {**state, "intent": intent}
 
 EXTRACT_PROMPT = """Extract the loan calculation parameters from the question below, if present.
