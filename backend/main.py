@@ -7,13 +7,20 @@ import tempfile
 from fastapi import UploadFile, File, Form
 import shutil
 import os
+import sys
 import logging
 from datetime import datetime
 
+handlers = [logging.StreamHandler(sys.stdout)]
+try:
+    handlers.append(logging.FileHandler("chat_logs.txt"))
+except Exception:
+    pass
+
 logging.basicConfig(
-    filename="chat_logs.txt",
     level=logging.INFO,
     format="%(asctime)s - %(message)s",
+    handlers=handlers,
 )
 
 # Silence noisy third-party HTTP logs, keep only our own app logs
@@ -129,3 +136,10 @@ async def upload_document(file: UploadFile = File(...), entity: str = Form(None)
     finally:
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    logging.info(f"Starting API server on 0.0.0.0:{port}")
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
