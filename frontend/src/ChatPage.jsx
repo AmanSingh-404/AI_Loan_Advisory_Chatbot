@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import './ChatPage.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://ailoanadvisorychatbot-production.up.railway.app')
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://ai-loan-advisory-chatbot-qfr5.onrender.com')
 
 
 function ChatPage() {
