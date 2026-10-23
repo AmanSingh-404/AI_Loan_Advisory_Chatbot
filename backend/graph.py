@@ -13,25 +13,38 @@ INDEX_DIR = "data/faiss_index"
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 MAX_RETRIES = 2
 
-# --- Shared resources ---
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-
-# This is the permanent, shared base index — same 4 loan documents for every user.
-base_vectorstore = FAISS.load_local(INDEX_DIR, embeddings, allow_dangerous_deserialization=True)
-
-# Per-session, in-memory only. Key = session_id, value = FAISS store.
-# NOTE: cleared whenever the server restarts. That's an intentional, documented
-# limitation for this project — a production version would use a persistent
-# per-user store (e.g. one index per user account) instead.
+# --- Lazy shared resources (enables instant port binding on Render) ---
+_embeddings = None
+_base_vectorstore = None
+_client = None
 session_stores = {}
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+def get_embeddings():
+    global _embeddings
+    if _embeddings is None:
+        _embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    return _embeddings
+
+
+def get_base_vectorstore():
+    global _base_vectorstore
+    if _base_vectorstore is None:
+        _base_vectorstore = FAISS.load_local(INDEX_DIR, get_embeddings(), allow_dangerous_deserialization=True)
+    return _base_vectorstore
+
+
+def get_client():
+    global _client
+    if _client is None:
+        _client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    return _client
 
 
 def add_session_document(session_id, chunks):
     """Add uploaded chunks to a session-only in-memory index. Never touches the shared base index."""
     if session_id not in session_stores:
-        session_stores[session_id] = FAISS.from_documents(chunks, embeddings)
+        session_stores[session_id] = FAISS.from_documents(chunks, get_embeddings())
     else:
         session_stores[session_id].add_documents(chunks)
 
@@ -41,6 +54,7 @@ def clear_session(session_id):
 
 
 def call_llm_with_retry(messages, max_retries=3):
+    client = get_client()
     for attempt in range(max_retries):
         try:
             response = client.chat.completions.create(model=GROQ_MODEL, messages=messages)
@@ -72,7 +86,7 @@ def retrieve_node(state: GraphState) -> GraphState:
     query = state["question"]
     session_id = state.get("session_id")
 
-    results = base_vectorstore.similarity_search(query, k=6)
+    results = get_base_vectorstore().similarity_search(query, k=6)
 
     if session_id and session_id in session_stores:
         session_results = session_stores[session_id].similarity_search(query, k=6)

@@ -2,7 +2,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from graph import app_graph, add_session_document
-from ingest import load_and_chunk_pdf
 import tempfile
 from fastapi import UploadFile, File, Form
 import shutil
@@ -74,6 +73,21 @@ def health_check():
     return {"status": "ok"}
 
 
+@app.on_event("startup")
+def startup_warmup():
+    import threading
+    def warmup():
+        try:
+            from graph import get_base_vectorstore
+            get_base_vectorstore()
+            logging.info("Vectorstore and embeddings warmed up in background.")
+        except Exception as e:
+            logging.warning(f"Background warmup notice: {e}")
+
+    threading.Thread(target=warmup, daemon=True).start()
+
+
+
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
     if not request.question.strip():
@@ -120,6 +134,7 @@ async def upload_document(file: UploadFile = File(...), entity: str = Form(None)
             shutil.copyfileobj(file.file, tmp)
             tmp_path = tmp.name
 
+        from ingest import load_and_chunk_pdf
         chunks = load_and_chunk_pdf(tmp_path, file.filename, entity=entity)
         add_session_document(session_id, chunks)
 
