@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import './ChatPage.css'
 
-const API_URL = 'https://ailoanadvisorychatbot-production.up.railway.app'
-// const API_URL = 'http://127.0.0.1:8000'
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://ailoanadvisorychatbot-production.up.railway.app')
+
 
 function ChatPage() {
   const [messages, setMessages] = useState([])
@@ -13,6 +15,13 @@ function ChatPage() {
   const fileInputRef = useRef(null)
 
   const sessionId = useRef(crypto.randomUUID())
+  const [copiedIdx, setCopiedIdx] = useState(null)
+
+  const handleCopy = (text, idx) => {
+    navigator.clipboard.writeText(text)
+    setCopiedIdx(idx)
+    setTimeout(() => setCopiedIdx(null), 2000)
+  }
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -159,10 +168,39 @@ function ChatPage() {
           return (
             <div key={idx} className={`vc-row ${isBot ? 'bot' : 'user'}`}>
               <div className={`vc-bubble ${isBot ? statusClass : 'user'}`}>
-                {isBot && <div className={`vc-status mono ${statusClass}`}>{statusLabel}</div>}
-                <div className="vc-text">{msg.text}</div>
+                {isBot && (
+                  <div className="vc-bubble-header">
+                    <div className={`vc-status mono ${statusClass}`}>{statusLabel}</div>
+                    <button
+                      className="vc-copy-btn mono"
+                      onClick={() => handleCopy(msg.text, idx)}
+                      title="Copy formatted answer"
+                    >
+                      {copiedIdx === idx ? '✓ COPIED' : '📋 COPY'}
+                    </button>
+                  </div>
+                )}
+                {isBot ? (
+                  <div className="vc-text markdown-content">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.text}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <div className="vc-text user-text">{msg.text}</div>
+                )}
                 {isBot && hasSources && (
-                  <div className="vc-sources mono">§ {msg.sources.join(' · ')}</div>
+                  <div className="vc-sources">
+                    <div className="vc-sources-title mono">§ SOURCE CASE FILES</div>
+                    <div className="vc-sources-chips">
+                      {msg.sources.map((src, sIdx) => (
+                        <span key={sIdx} className="vc-source-chip mono" title={src}>
+                          <span className="vc-source-icon">📄</span>
+                          <span className="vc-source-name">{src}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

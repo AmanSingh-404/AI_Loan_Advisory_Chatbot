@@ -10,7 +10,7 @@ from langgraph.graph import StateGraph, END
 load_dotenv()
 
 INDEX_DIR = "data/faiss_index"
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 MAX_RETRIES = 2
 
 # --- Shared resources ---
@@ -97,6 +97,11 @@ STRICT RULES:
 - Each piece of context is labeled with its source document. Do NOT mix or combine rules from different source documents into a single statement unless the question explicitly asks you to compare them.
 - If different source documents contain different or seemingly conflicting rules, mention each source separately and attribute each rule to its specific document by name.
 - Never imply a rule from one document (e.g., an RBI circular) applies to a specific bank's product (e.g., SBI) unless that exact document states so.
+- Format your response cleanly and professionally using standard Markdown:
+  * Structure long or multi-item answers with clean bullet points or numbered lists.
+  * Always use natural spacing after commas, colons, and punctuation (e.g., "Python, SQL, JavaScript" instead of "Python,SQL,JavaScript").
+  * Do not break category titles across lines; keep titles clear and bold (e.g., "- **Programming Languages:** Python, SQL...").
+  * Use bolding (**term**) for key metrics, numbers, or section headers to make the answer easy to scan.
 
 Context:
 {context}
