@@ -3,7 +3,7 @@ import time
 from typing import TypedDict, List, Optional
 from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from groq import Groq
 from langgraph.graph import StateGraph, END
 
@@ -23,7 +23,7 @@ session_stores = {}
 def get_embeddings():
     global _embeddings
     if _embeddings is None:
-        _embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        _embeddings = FastEmbedEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     return _embeddings
 
 
