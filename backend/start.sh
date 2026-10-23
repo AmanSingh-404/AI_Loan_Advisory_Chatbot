@@ -7,4 +7,4 @@ if [ ! -d "data/faiss_index" ]; then
 fi
 
 echo "Starting Uvicorn API server..."
-exec uvicorn main:app --host 0.0.0.0 --port "${PORT:-8000}"
+exec uvicorn main:app --host 0.0.0.0 --port "${PORT:-10000}"
