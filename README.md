@@ -2,7 +2,7 @@
 
 LoanSense AI is a retrieval-augmented generation (RAG) chatbot that answers loan-related questions using only the content of documents it has been given, such as loan policy PDFs, terms and conditions, and regulatory circulars. Every answer is either traced back to a specific source document or explicitly declined when the information is not available, rather than guessed or inferred from general knowledge.
 
-Live application: https://ai-loan-advisory-chatbot-chi.vercel.app
+Live application: https://ai-loan-advisory-chatbot-nine.vercel.app/
 
 ---
 
